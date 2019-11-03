@@ -1,9 +1,25 @@
 import re
-from random import sample
+from random import sample, choice
 
-class chatBot:
+class rules:
+    def __init__(self):
+        self.searchLimit = 100
+        self.personConverter = {
+                                "i": "you",
+                                "you": "i",
+                                "we": "you",
+                                "am": "are",
+                                "are": "am",
+                                "me": "you",
+                                "us": "you"
+                                }
+
+class chatBot(rules):
 
     def __init__(self):
+
+        super().__init__()
+
         self.textBuffer = []
         self.startWord = set()
         self.wordDict = {}
@@ -84,13 +100,97 @@ class chatBot:
 
         return sentence
 
+    def questionCurater(self, question):
+
+        question = question.lower()
+
+        wordPattern = re.compile(r'[a-zA-Z]*(\')?([a-zA-Z]|[0-9]|-)*')
+
+        matches = wordPattern.finditer(question)
+
+        question = []
+
+        for elem in matches:
+            if elem.group() != '':
+                question.append(elem.group())
+
+        question.append('.')
+
+        for i in range(len(question)):
+            word = question[i]
+            if self.personConverter.get(word) != None:
+                question[i] = self.personConverter[word]
+
+        return question
+
+    def words2sentence(self, wordSet, startWord, sentence):
+
+        needsToBeInSet = choice([True])
+        curWord = sample(self.wordDict[startWord], 1)[0]
+
+        if needsToBeInSet:
+
+            cnt = 0
+            while curWord not in wordSet and cnt <= self.searchLimit:
+                curWord = sample(self.wordDict[startWord], 1)[0]
+                cnt += 1
+
+        if curWord is ".":
+            return sentence + choice([".", "!", "?", "."])
+        else:
+            sentence += " " + curWord
+            return self.words2sentence(wordSet, curWord, sentence)
+
     def newResponseSentence(self, question):
-        pass
+
+        question = self.questionCurater(question)
+
+        #searching for the words into the start set
+
+        startAnswer = ""
+
+        for word in question:
+
+            if word in self.startWord:
+                startAnswer = word
+                break
+            else:
+
+                capitalizeVar = word.capitalize()
+
+                if capitalizeVar in self.startWord:
+                    startAnswer = capitalizeVar
+                    break
+                else:
+
+                    capsVar = word.upper()
+
+                    if capsVar in self.startWord:
+                        startAnswer = capsVar
+                        break
+
+        question = set(question)
+
+        if startAnswer != "":
+            question.remove(startAnswer.lower())
+        else:
+            startAnswer = sample(self.startWord, 1)[0]
+
+        return self.words2sentence(question, startAnswer, startAnswer).capitalize()
+
 
 lilith = chatBot()
-
 lilith.text2sentence("text.txt")
 lilith.sentence2dict()
 
-#for i in range(100):
-#    print(lilith.newRandomSentence())
+question = "This shuttle needs to be destroyed."
+
+print(lilith.newResponseSentence(question))
+
+"""""
+response = lilith.newResponseSentence(question)
+
+for i in range(100):
+    response += " " + lilith.newResponseSentence(question)
+
+print(response)"""
